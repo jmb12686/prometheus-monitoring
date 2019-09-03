@@ -1,0 +1,46 @@
+version: "3.2"
+volumes:
+    prometheus_data: {}
+    grafana_storage: {}
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert.rules.yml:/etc/prometheus/alert.rules.yml
+      - prometheus_data:/prometheus      
+    depends_on:
+      - cadvisor-exporter
+      - node-exporter
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    user: "104"
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring      
+  node-exporter:
+    image: prom/node-exporter
+    ports:
+      - "9100:9100"
+  cadvisor-exporter:
+    image: google/cadvisor:latest
+    container_name: cadvisor-exporter
+    ports:
+      - 9200:8080
+    volumes:
+    #  - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
